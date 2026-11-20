@@ -1,0 +1,8 @@
+{
+  "appId": "com.meragaon.farming",
+  "appName": "Mera Gaon Farming",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}

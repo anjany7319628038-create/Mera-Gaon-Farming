@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#347a3b"><title>मेरा गाँव - Farming</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,"Noto Sans Devanagari",sans-serif;background:#e9f4d8;color:#203b24}
+header{background:#347a3b;color:white;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 3px 8px #0002}
+h1{font-size:21px;margin:0}.stats{display:flex;gap:8px;font-weight:700;font-size:14px}.pill{background:#ffffff25;padding:7px 10px;border-radius:20px}
+main{max-width:760px;margin:auto;padding:12px}.scene{position:relative;background:linear-gradient(#a9dcf2 0 45%,#7fc65c 45%);border:4px solid #fff;border-radius:18px;overflow:hidden;min-height:175px;padding:12px}
+.sun{position:absolute;right:22px;top:14px;font-size:36px}.house{font-size:55px;position:absolute;left:18px;bottom:24px}.tree{font-size:43px;position:absolute;right:22%;bottom:20px}.sign{position:absolute;bottom:9px;left:42%;background:#80552d;color:white;padding:5px 10px;border-radius:8px;font-size:12px}
+h2{font-size:18px;margin:14px 2px 8px}.farm{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.plot{min-height:105px;background:#8d5b35;border:3px solid #704326;border-radius:12px;color:white;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:13px;box-shadow:inset 0 4px 8px #0002}
+.plot .crop{font-size:34px}.plot.ready{background:#a87932;border-color:#e4b44f}
+.controls{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+button{border:0;border-radius:12px;padding:12px 7px;background:#347a3b;color:white;font-size:14px;font-weight:700;box-shadow:0 3px 0 #235629;cursor:pointer}
+button:active{transform:translateY(2px);box-shadow:0 1px 0 #235629}button.secondary{background:#e2a83b;color:#39270a;box-shadow:0 3px 0 #b17c20}
+button:disabled{opacity:.45;filter:grayscale(1)}
+.panel{background:white;border-radius:14px;padding:12px;margin-top:12px;box-shadow:0 2px 8px #0001}.hint{font-size:13px;color:#58705a;line-height:1.5}.message{min-height:24px;color:#245f2b;font-weight:700;font-size:14px;margin-top:9px}
+footer{text-align:center;font-size:12px;color:#647a61;padding:18px}
+@media(min-width:600px){.farm{grid-template-columns:repeat(3,1fr)}.plot{min-height:125px}}
+</style></head>
+<body>
+<header><h1>🌾 मेरा गाँव</h1><div class="stats"><span class="pill">🪙 <b id="coins">50</b></span><span class="pill">☀️ दिन <b id="day">1</b></span></div></header>
+<main>
+<section class="scene"><span class="sun">☀️</span><span class="house">🏡</span><span class="tree">🌳</span><span class="sign">मेरा प्यारा गाँव</span></section>
+<h2>🚜 तुम्हारा खेत</h2>
+<div class="farm" id="farm"></div>
+<div class="controls">
+<button id="seed" onclick="selectSeed('wheat')">🌾 गेहूँ बीज<br>10 🪙</button>
+<button id="water" class="secondary" onclick="waterSelected()">💧 पानी दो</button>
+<button id="harvest" onclick="harvestSelected()">🧺 फसल काटो</button>
+</div>
+<div class="panel">
+<h2 style="margin-top:0">🛒 किसान दुकान</h2>
+<div class="controls">
+<button onclick="buySeed('rice')">🌱 धान बीज<br>15 🪙</button>
+<button onclick="buySeed('corn')">🌽 मक्का बीज<br>20 🪙</button>
+<button class="secondary" onclick="nextDay()">🌅 अगला दिन</button>
+</div>
+<p class="hint">खेलने का तरीका: गेहूँ का बीज चुनो, खाली खेत पर टैप करके बोओ, फिर पानी दो। अगला दिन करने पर फसल बढ़ेगी। तैयार फसल काटकर सिक्के पाओ।</p>
+<div class="message" id="message">नमस्ते किसान! चलो खेती शुरू करें।</div>
+</div>
+</main><footer>मेरा गाँव Farming • Version 1.0 • सिक्के केवल गेम के अंदर इस्तेमाल होते हैं</footer>
+<script>
+const crops={wheat:{name:"गेहूँ",emoji:"🌾",cost:10,water:1,days:2,reward:25},rice:{name:"धान",emoji:"🌱",cost:15,water:2,days:3,reward:38},corn:{name:"मक्का",emoji:"🌽",cost:20,water:1,days:2,reward:45}};
+let coins=50,day=1,selected="wheat",plots=Array.from({length:6},()=>({crop:null,age:0,water:0,ready:false}));
+let selectedPlot=0;
+const $=id=>document.getElementById(id);
+function say(t){$("message").textContent=t}
+function render(){
+ $("coins").textContent=coins;$("day").textContent=day;
+ $("farm").innerHTML="";
+ plots.forEach((p,i)=>{
+  let b=document.createElement("button");b.className="plot"+(p.ready?" ready":"");
+  let emoji=p.crop?(p.ready?"🧺":(p.age===0?"🌰":crops[p.crop].emoji)):"🟫";
+  let label=p.crop?(p.ready?"फसल तैयार":crops[p.crop].name+" • "+p.age+"/"+crops[p.crop].days+" दिन"):"खाली खेत";
+  b.innerHTML=`<span class="crop">${emoji}</span><strong>खेत ${i+1}</strong><span>${label}</span>`;
+  b.onclick=()=>plant(i);$("farm").appendChild(b);
+ });
+ $("seed").textContent=`${crops[selected].emoji} ${crops[selected].name} बीज\n${crops[selected].cost} 🪙`;
+}
+function selectSeed(type){selected=type;say(crops[type].name+" चुना गया। अब खाली खेत पर टैप करो।");render()}
+function plant(i){
+ selectedPlot=i;let p=plots[i];
+ if(p.crop){say("यह खेत खाली नहीं है। पहले फसल तैयार करो या काटो।");return}
+ let c=crops[selected];if(coins<c.cost){say("इतने सिक्के नहीं हैं। पहले फसल काटो।");return}
+ coins-=c.cost;plots[i]={crop:selected,age:0,water:0,ready:false};say(c.name+" बो दिया गया! अब पानी दो।");render()
+}
+function waterSelected(){
+ let p=plots[selectedPlot];if(!p.crop){say("पहले खेत में बीज बोओ।");return}
+ if(p.ready){say("फसल पहले से तैयार है!");return}
+ if(p.water>=crops[p.crop].water){say("आज के लिए इस खेत को पर्याप्त पानी मिल चुका है।");return}
+ p.water++;say("💧 खेत "+(selectedPlot+1)+" को पानी मिल गया।");render()
+}
+function harvestSelected(){
+ let p=plots[selectedPlot];if(!p.crop){say("इस खेत में फसल नहीं है।");return}
+ if(!p.ready){say("फसल अभी तैयार नहीं हुई। पानी दो और अगला दिन करो।");return}
+ let c=crops[p.crop];coins+=c.reward;plots[selectedPlot]={crop:null,age:0,water:0,ready:false};say(c.name+" की फसल काटी! तुम्हें "+c.reward+" सिक्के मिले।");render()
+}
+function buySeed(type){selected=type;say(crops[type].name+" चुना गया। इसकी कीमत "+crops[type].cost+" सिक्के है। खाली खेत पर टैप करके बोओ।");render()}
+function nextDay(){
+ day++;
+ plots.forEach(p=>{if(p.crop&&!p.ready){let c=crops[p.crop];if(p.water>=c.water){p.age++;p.water=0;if(p.age>=c.days)p.ready=true}}});
+ say("नया दिन शुरू! खेतों को पानी देना न भूलें।");render()
+}
+render();
+</script></body></html>
